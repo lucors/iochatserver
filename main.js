@@ -1,8 +1,8 @@
 const handler = require('./handler.js');
-const WebSocket = require('ws');
-const WebSocketPort = 9000;
-const server = new WebSocket.Server({ port: WebSocketPort });
+const ioPort = 9000;
+const io = require('socket.io')();
 
 handler.prepare();
-server.on('connection', handler.onConnect);
-console.log(`Сервер запущен на порту: ${WebSocketPort}`);
+io.on('connection', handler.onConnect);
+io.listen(ioPort);
+console.log(`Сервер запущен на порту: ${ioPort}`);

@@ -114,7 +114,7 @@ module.exports.onConnect = function(client) {
   console.log("Пользователь подключился");
   // direct(client, "NOTIFY", "Выберите канал");
   client.on("message", (msg) => onMessage(client, msg));
-  client.on("close", (msg) => onClose(client));
+  client.on("disconnect", (msg) => onClose(client));
 }
 
 

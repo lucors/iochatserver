@@ -1,16 +1,16 @@
 {
-  "name": "ws-test-app",
-  "version": "1.0.0",
-  "description": "JustHosting WS test",
+  "name": "iochatserver",
+  "version": "0.0.1",
+  "description": "Socket.io based chat server",
   "main": "main.js",
   "scripts": {
     "start": "node main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Lucors",
+  "author": "lucors",
   "license": "ISC",
   "dependencies": {
     "mysql2": "^3.2.0",
-    "ws": "^8.13.0"
+    "socket.io": "^4.6.2"
   }
 }
