@@ -116,7 +116,7 @@ module.exports.onConnect = function(client) {
   client.on("message", (msg) => onMessage(client, msg));
   client.on("disconnect", (msg) => onClose(client));
 }
-
+module.exports.handlerConfig = config;
 
 
 //-----------------------------------------------------------------------------------
