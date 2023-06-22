@@ -1,7 +1,7 @@
 const handler = require('./handler.js');
 const ioPort = 9000;
 const socketOptions = {
-  path: handler.handlerConfig.debug ? "" : "/iochatserver/socket.io",
+  path: handler.config.debug ? "" : "/iochatserver/socket.io",
   cors: {
     origin: "*"
   }

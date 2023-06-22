@@ -7,11 +7,17 @@ config.db = {
     database: "wsc",
     password: "root"
 };
+config.msg = {
+    slice: 500
+};
+config.who = {
+    unavailableNames: [":","?","сервер", "server"],
+    slice: 50
+}
 config.historySlice = {
     count: 50,
     time: 1800*1000,
 };
-config.unavailableNames = ["сервер", "server"];
-config.notify = `Добро пожаловать в<br><strong>WebSocket Chat!</strong>`;
+config.notify = `Добро пожаловать в<br><strong>Socket.io Chat!</strong>`;
 
 module.exports = config;
