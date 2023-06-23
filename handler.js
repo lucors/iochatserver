@@ -66,6 +66,35 @@ const historyPool = {
 
 //-----------------------------------------------------------------------------------
 // EXPORTS
+module.exports.config = config;
+module.exports.onConnect = function(client) {
+  console.log("Пользователь подключился");
+  // direct(client, "NOTIFY", "Выберите канал");
+
+  var onevent = client.onevent;
+  client.onevent = function (packet) {
+      var args = packet.data || [];
+      if (flags.debug && !args[0].includes("test:")) {
+        console.log(`event> (${client.who || "?"}:${client.admin ? 'A' : 'U'}): ${args.toString().slice(0, 60)}`);
+      }
+      onevent.call(this, packet);
+  }
+
+  client.on("message",      handlers.onMessage.bind(handlers, client));
+  client.on("disconnect",   handlers.onClose.bind(handlers, client));
+  client.on("test:ping",    handlers.ping.bind(handlers, client));
+  client.on("auth:auth",    handlers.auth.bind(handlers, client));
+  client.on("auth:pass",    handlers.authPass.bind(handlers, client));
+  client.on("room:change",  handlers.roomChange.bind(handlers, client));
+  client.on("msg:msg",      handlers.msg.bind(handlers, client));
+  client.on("msg:blur",     handlers.msgBlur.bind(handlers, client));
+  client.on("msg:direct",   handlers.msgDirect.bind(handlers, client));
+  client.on("msg:server",   handlers.msgServer.bind(handlers, client));
+  client.on("cfg:reload",   handlers.cfgReload.bind(handlers, client));
+
+  client.on("msg:broadcast",      handlers.broadcast.bind(handlers, client));
+  client.on("msg:broadcast:room", handlers.broadcastR.bind(handlers, client));
+}
 module.exports.prepare = function() {
   flags.prepareAdmins = false;
   flags.prepareRooms = false;
@@ -109,35 +138,6 @@ module.exports.prepare = function() {
   );
   db.end();
 }
-module.exports.onConnect = function(client) {
-  console.log("Пользователь подключился");
-  // direct(client, "NOTIFY", "Выберите канал");
-
-  var onevent = client.onevent;
-  client.onevent = function (packet) {
-      var args = packet.data || [];
-      if (flags.debug && !args[0].includes("test:")) {
-        console.log(`event> (${client.who || "?"}:${client.admin ? 'A' : 'U'}): ${args.toString().slice(0, 60)}`);
-      }
-      onevent.call(this, packet);
-  }
-
-  client.on("message",      handlers.onMessage.bind(handlers, client));
-  client.on("disconnect",   handlers.onClose.bind(handlers, client));
-  client.on("test:ping",    handlers.ping.bind(handlers, client));
-  client.on("auth:auth",    handlers.auth.bind(handlers, client));
-  client.on("auth:pass",    handlers.authPass.bind(handlers, client));
-  client.on("room:change",  handlers.roomChange.bind(handlers, client));
-  client.on("msg:msg",      handlers.msg.bind(handlers, client));
-  client.on("msg:blur",     handlers.msgBlur.bind(handlers, client));
-  client.on("msg:direct",   handlers.msgDirect.bind(handlers, client));
-  client.on("msg:server",   handlers.msgServer.bind(handlers, client));
-  client.on("cfg:reload",   handlers.cfgReload.bind(handlers, client));
-
-  client.on("msg:broadcast",      handlers.broadcast.bind(handlers, client));
-  client.on("msg:broadcast:room", handlers.broadcastR.bind(handlers, client));
-}
-module.exports.config = config;
 
 const handlers = {
   onClose: (client, kick=false) => {
@@ -189,9 +189,8 @@ const handlers = {
   },
 
   auth: (client, message) => {
-    if (message.length < 2) return;
-    if (!message[1]) return;
-    let who = message[1].slice(0, config.who.slice);
+    if (!message) return;
+    let who = message.slice(0, config.who.slice);
     if (config.who.unavailableNames.includes(who.toLowerCase())) {
       userUtils.direct(client, "AUTH_FAIL", "Имя недоступно");
       return;
@@ -210,11 +209,10 @@ const handlers = {
   },
 
   authPass: (client, message) => {
+    if (!message) return;
     if (message.length < 2) return;
-    if (!message[1]) return;
-    if (message[1].length < 2) return;
-    let who = message[1][0].slice(0, config.who.slice);
-    let hashpass = message[1][1];
+    let who = message[0].slice(0, config.who.slice);
+    let hashpass = message[1];
     for (let cl of clients) {
       if (cl.who === who) {
         userUtils.direct(client, "AUTH_FAIL", "Имя занято");
@@ -230,9 +228,8 @@ const handlers = {
 
   roomChange: (client, message) => {
     if (!client.who) return;
-    if (message.length < 2) return;
 
-    const rid = message[1];
+    const rid = message;
     if (!roomUtils.checkRid(rid)) {
       userUtils.direct(client, "ROOM_CHANGE_FAIL", "Комната не найдена");
       return;
@@ -249,22 +246,20 @@ const handlers = {
     if (!clients.has(client)) return;
     if (!("who" in client)) return;
     if (!("rid" in client)) return;
-    if (message.length < 2) return;
-    if (message[1] === "") return;
+    if (message === "") return;
 
-    message[1] = message[1].slice(0, config.msg.slice);
-    roomUtils.roomBroadcast(client.rid, "MSG", [client.who, message[1]]);
+    message = message.slice(0, config.msg.slice);
+    roomUtils.roomBroadcast(client.rid, "MSG", [client.who, message]);
   },
 
   msgBlur: (client, message) => {
     if (!clients.has(client)) return;
     if (!("who" in client)) return;
     if (!("rid" in client)) return;
-    if (message.length < 2) return;
-    if (message[1] === "") return;
+    if (message === "") return;
 
-    message[1] = message[1].slice(0, config.msg.slice);
-    roomUtils.roomBroadcast(client.rid, "MSG_BLUR", [client.who, message[1]]);
+    message = message.slice(0, config.msg.slice);
+    roomUtils.roomBroadcast(client.rid, "MSG_BLUR", [client.who, message]);
   },
 
   msgDirect: (client, message) => {
@@ -272,43 +267,40 @@ const handlers = {
     if (!("who" in client)) return;
     if (!("rid" in client)) return;
     if (message.length < 2) return;
-    if (message[1].length < 2) return;
-    if (!message[1][0] || !message[1][1]) return;
+    if (!message[0] || !message[1]) return;
 
-    if (message[1][0] === client.who) {
+    if (message[0] === client.who) {
       userUtils.direct(client, "ERROR", "Отправка самому себе недоступна");
       return;
     }
-    const whom = roomUtils.roomMemberByWho(client.rid, message[1][0]);
+    const whom = roomUtils.roomMemberByWho(client.rid, message[0]);
     if (!whom) {
       userUtils.direct(client, "ERROR", "Пользователь не найден");
       return;
     }
-    message[1][1] = message[1][1].slice(0, config.msg.slice);
-    userUtils.direct(client, "MSG_DIRECT", [client.who, whom.who, message[1][1]]);
-    userUtils.direct(whom, "MSG_DIRECT", [client.who, whom.who, message[1][1]]);
+    message[1] = message[1].slice(0, config.msg.slice);
+    userUtils.direct(client, "MSG_DIRECT", [client.who, whom.who, message[1]]);
+    userUtils.direct(whom, "MSG_DIRECT", [client.who, whom.who, message[1]]);
   },
 
   broadcast: (client, message) => {
     if (!client.admin) return;
-    if (message.length < 2) return;
-    if (!message[1]) return;
+    if (!message) return;
     
-    userUtils.totalBroadcast("NOTIFY", message[1]);
+    userUtils.totalBroadcast("NOTIFY", message);
   },
 
   broadcastR: (client, message) => {
     if (!client.admin) return;
-    if (message.length < 2) return;
     
-    if (typeof message[1] === "string") {
-      if (!message[1] || (client.rid === undefined)) return;
-      roomUtils.roomBroadcast(client.rid, "NOTIFY", message[1]);
+    if (typeof message === "string") {
+      if (!message || (client.rid === undefined)) return;
+      roomUtils.roomBroadcast(client.rid, "NOTIFY", message);
     }
     else {
-      if (message[1].length < 2) return;
-      if (!message[1][0] || !message[1][1]) return;
-      roomUtils.roomBroadcast(message[1][0], "NOTIFY", message[1][1]);
+      if (message.length < 2) return;
+      if (!message[0] || !message[1]) return;
+      roomUtils.roomBroadcast(message[0], "NOTIFY", message[1]);
     }
   },
 
@@ -316,11 +308,10 @@ const handlers = {
     if (!client.admin) return;
     if (!clients.has(client)) return;
     if (!("rid" in client)) return;
-    if (message.length < 2) return;
-    if (message[1] === "") return;
+    if (message === "") return;
 
-    message[1] = message[1].slice(0, config.msg.slice);
-    roomUtils.roomBroadcast(client.rid, "MSG", ["Сервер", message[1]]);
+    message = message.slice(0, config.msg.slice);
+    roomUtils.roomBroadcast(client.rid, "MSG", ["Сервер", message]);
   },
 
   cfgReload: (client, message) => {
@@ -332,11 +323,11 @@ const handlers = {
   memKick: (client, message) => {
     if (!client.admin) return;
 
-    if (message[1] === client.who) {
+    if (message === client.who) {
       userUtils.direct(client, "ERROR", "Себя исключить нельзя");
       return;
     }
-    const whom = userUtils.clientByWho(message[1]);
+    const whom = userUtils.clientByWho(message);
     if (!whom) {
       userUtils.direct(client, "ERROR", "Пользователь не найден");
       return;
