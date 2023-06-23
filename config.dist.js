@@ -18,6 +18,9 @@ config.historySlice = {
     count: 50,
     time: 1800*1000,
 };
-config.notify = `Добро пожаловать в<br><strong>Socket.io Chat!</strong>`;
+config.notify = `
+    Добро пожаловать в<br><strong>Socket.io Chat!</strong>
+    <br>Отправьте @help для получения списка доступных команд
+`
 
 module.exports = config;
