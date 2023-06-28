@@ -2,10 +2,8 @@ const fs = require("fs");
 const mysql = require('mysql2');
 const config = require("./config.js");
 
-// [wsClient, ...]
 let db;
 const clients = new Set();
-// let incomingHandlers = []; //[{mode: string, func: function()},...]
 let flags = {
   debug: config.debug,
   prepareAdmins: false,
@@ -122,14 +120,15 @@ module.exports.prepare = function() {
         flags.prepareRooms = true;
         return;
       }
-      rooms = [];
-      results.forEach((room) => {
-        rooms.push({
+      let tmpRooms = [];
+      results.forEach((room, rid) => {
+        tmpRooms.push({
           title: room["title"],
-          mems: new Set(),
+          mems: rooms[rid] ? new Set(rooms[rid].mems) : new Set(),
           history: Boolean(room["history"]),
         })
       });
+      rooms = tmpRooms;
       historyPool.prepare();
       //Старт цикла среза истории
       historyPool.slice(config.historySlice.count, config.historySlice.time);
